@@ -5,12 +5,11 @@ import { useAuth, useSignIn, useSignUp, useUser } from "@clerk/clerk-react";
 import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import Nav from "../components/Nav";
 import Footer from "../components/Footer";
-import SignalMark from "../components/SignalMark";
 import { api } from "../lib/api";
 
 const LOCATIONS = ["Global", "India", "United States", "United Kingdom", "Europe", "Southeast Asia", "Other"];
 
-type Step = "looking" | "offer" | "email" | "verify" | "submitting" | "success";
+type Step = "looking" | "offer" | "email" | "verify" | "submitting";
 
 export default function SignalFlow() {
   const navigate = useNavigate();
@@ -27,7 +26,6 @@ export default function SignalFlow() {
   const [code, setCode] = useState("");
   const [verifyMode, setVerifyMode] = useState<"signup" | "signin">("signup");
   const [error, setError] = useState<string | null>(null);
-  const [submittedSignal, setSubmittedSignal] = useState<any>(null);
 
   useEffect(() => {
     api.trackEvent("form_started");
@@ -40,12 +38,14 @@ export default function SignalFlow() {
     setStep("submitting");
     setError(null);
     try {
-      const { signal } = await api.submitSignal({ lookingFor, canOffer, location }, getToken);
-      setSubmittedSignal(signal);
-      setStep("success");
+      // 1. Send data to Supabase via backend API
+      await api.submitSignal({ lookingFor, canOffer, location }, getToken);
       api.trackEvent("signal_created");
+      
+      // 2. Automatically redirect user to their dashboard
+      window.location.href = "/my-signal";
     } catch (err: any) {
-      setError(err.message ?? "Something went wrong. Please try again.");
+      setError(err.message ?? "Something went wrong saving your signal. Please try again.");
       setStep("email");
     }
   }
@@ -59,7 +59,6 @@ export default function SignalFlow() {
     api.trackEvent("email_entered");
 
     if (isSignedIn) {
-      // Already authenticated in this browser — skip verification entirely.
       await submitSignalToBackend();
       return;
     }
@@ -148,46 +147,6 @@ export default function SignalFlow() {
     const idx = order.indexOf(step);
     return idx === -1 ? 100 : ((idx + 1) / order.length) * 100;
   }, [step]);
-
-  if (step === "success") {
-    return (
-      <div>
-        <Nav />
-        <section className="container-page flex flex-col items-center py-20 text-center">
-          <m.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-            <SignalMark size={180} />
-          </m.div>
-          <h1 className="mt-6 font-display text-4xl font-semibold">You're in.</h1>
-          <p className="mt-3 max-w-md text-muted">Your signal has been added to the network.</p>
-
-          <div className="card mt-10 w-full max-w-lg p-8 text-left">
-            <div>
-              <p className="font-mono text-xs uppercase tracking-wide text-muted">Looking for</p>
-              <p className="mt-1 text-[15px]">{submittedSignal?.looking_for ?? lookingFor}</p>
-            </div>
-            <div className="mt-6">
-              <p className="font-mono text-xs uppercase tracking-wide text-muted">Can offer</p>
-              <p className="mt-1 text-[15px]">{submittedSignal?.can_offer ?? canOffer}</p>
-            </div>
-          </div>
-
-          <p className="mt-8 max-w-md text-sm text-muted">
-            We'll email you when we find a relevant match.
-          </p>
-
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
-            <a href="https://rightsignal.social" className="btn-primary">
-              Explore RightSignal →
-            </a>
-            <button onClick={() => navigate("/")} className="btn-secondary">
-              Done
-            </button>
-          </div>
-        </section>
-        <Footer />
-      </div>
-    );
-  }
 
   return (
     <div>
