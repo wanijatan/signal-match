@@ -1,3 +1,4 @@
+// @ts-expect-error
 import { createApp } from "../dist/app.js";
 
 // Vercel serverless entrypoint. Imports the pre-compiled output (built by
