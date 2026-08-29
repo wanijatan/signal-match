@@ -2,6 +2,7 @@
   "buildCommand": "npm run build",
   "installCommand": "npm install",
   "rewrites": [
+    { "source": "/api/signals", "destination": "/api/signals" },
     { "source": "/(.*)", "destination": "/api/index" }
   ],
   "crons": [
