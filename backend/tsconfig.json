@@ -8,5 +8,5 @@
     "skipLibCheck": true,
     "noEmitOnError": false
   },
-  "include": ["api/**/*", "src/**/*"]
+  "include": ["api/index.ts"]
 }
