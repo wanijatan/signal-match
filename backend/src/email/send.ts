@@ -97,6 +97,22 @@ export async function sendMutualMatchEmails(match: Match, signalA: Signal, signa
   }
 }
 
+/**
+ * Admin-triggered manual follow-up, sent from the admin dashboard to nudge
+ * a specific signal's owner (e.g. "haven't heard back", "still looking?").
+ */
+export async function sendAdminFollowUpEmail(userId: string, email: string, message: string) {
+  const html = emailLayout(`
+    <h2 style="margin:0 0 12px;font-size:20px;">A quick note from Signal</h2>
+    <p style="white-space:pre-wrap;">${message
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")}</p>
+    ${button("View my signal →", `${env.APP_URL}/my-signal`)}
+  `);
+  await sendEmail({ to: email, subject: "A quick note from Signal", html, type: "admin_followup", userId });
+}
+
 export async function sendRequestForwardedEmail(to: string, lookingFor: string, requestToken: string) {
   const html = emailLayout(`
     <h2 style="margin:0 0 12px;font-size:20px;">Someone is looking for:</h2>
