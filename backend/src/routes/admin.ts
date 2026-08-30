@@ -4,7 +4,7 @@ import { supabase } from "../services/supabase.js";
 import { requireAuth, requireAdmin } from "../middleware/auth.js";
 import { runMatchingForSignal } from "../jobs/matchJob.js";
 import { nanoid } from "nanoid";
-import { sendMatchEmails } from "../email/send.js";
+import { sendMatchEmails, sendAdminFollowUpEmail } from "../email/send.js";
 import type { Signal } from "../types/index.js";
 
 export const adminRouter = Router();
@@ -173,4 +173,65 @@ adminRouter.get("/reports", async (_req, res) => {
     .limit(100);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ reports: data });
+});
+
+/**
+ * GET /api/admin/analytics — activity breakdown for the last 30 days:
+ * event counts by type (the funnel from landing view through mutual
+ * match), plus distinct visitor/user approximations. "Visitors" counts
+ * distinct anonymous+authenticated actors who fired a landing_view;
+ * "users" counts everyone who ever created a signal.
+ */
+adminRouter.get("/analytics", async (_req, res) => {
+  const since = new Date(Date.now() - 30 * 86400000).toISOString();
+
+  const { data: events, error } = await supabase
+    .from("analytics_events")
+    .select("event_name, user_id, created_at")
+    .gte("created_at", since);
+  if (error) return res.status(500).json({ error: error.message });
+
+  const breakdown: Record<string, number> = {};
+  const landingUserIds = new Set<string>();
+  for (const e of events ?? []) {
+    breakdown[e.event_name] = (breakdown[e.event_name] ?? 0) + 1;
+    if (e.event_name === "landing_view" && e.user_id) landingUserIds.add(e.user_id);
+  }
+
+  const { count: totalUsers } = await supabase
+    .from("users")
+    .select("id", { count: "exact", head: true });
+
+  res.json({
+    since,
+    breakdown, // e.g. { landing_view: 42, cta_clicked: 18, signal_created: 6, ... }
+    totalUsers: totalUsers ?? 0,
+    landingViews30d: breakdown["landing_view"] ?? 0,
+  });
+});
+
+const nudgeSchema = z.object({
+  message: z.string().min(5).max(1000),
+});
+
+/**
+ * POST /api/admin/signals/:id/nudge — sends the signal's owner a manual
+ * follow-up email drafted from the admin dashboard.
+ */
+adminRouter.post("/signals/:id/nudge", async (req, res) => {
+  const parsed = nudgeSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Write a message to send." });
+
+  const { data: signal } = await supabase
+    .from("signals")
+    .select("user_id")
+    .eq("id", req.params.id)
+    .maybeSingle();
+  if (!signal) return res.status(404).json({ error: "Signal not found." });
+
+  const { data: user } = await supabase.from("users").select("email").eq("id", signal.user_id).maybeSingle();
+  if (!user?.email) return res.status(404).json({ error: "Could not find that user's email." });
+
+  await sendAdminFollowUpEmail(signal.user_id, user.email, parsed.data.message);
+  res.json({ sent: true });
 });
