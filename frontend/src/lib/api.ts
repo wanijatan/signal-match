@@ -81,6 +81,7 @@ export const api = {
 
   admin: {
     stats: (getToken: GetToken) => request<any>("/api/admin/stats", { getToken }),
+    analytics: (getToken: GetToken) => request<any>("/api/admin/analytics", { getToken }),
     signals: (getToken: GetToken, params?: { query?: string; status?: string }) =>
       request<{ signals: any[] }>(
         `/api/admin/signals${params?.status || params?.query ? `?${new URLSearchParams(params as any)}` : ""}`,
@@ -92,5 +93,11 @@ export const api = {
       request(`/api/admin/signals/${id}`, { method: "PATCH", body: JSON.stringify(data), getToken }),
     triggerMatch: (id: string, getToken: GetToken) =>
       request(`/api/admin/signals/${id}/trigger-match`, { method: "POST", getToken }),
+    nudgeSignal: (id: string, message: string, getToken: GetToken) =>
+      request<{ sent: boolean }>(`/api/admin/signals/${id}/nudge`, {
+        method: "POST",
+        body: JSON.stringify({ message }),
+        getToken,
+      }),
   },
 };
