@@ -31,6 +31,17 @@ export default function Signals() {
     alert("Matching re-run for this signal.");
   }
 
+  async function sendFollowUp(id: string) {
+    const message = prompt("Message to send this person (they'll get it as an email):");
+    if (!message) return;
+    try {
+      await api.admin.nudgeSignal(id, message, getToken);
+      alert("Follow-up sent.");
+    } catch (err: any) {
+      alert(err.message ?? "Could not send the follow-up.");
+    }
+  }
+
   return (
     <div>
       <h1 className="font-display text-2xl font-semibold">Signals</h1>
@@ -74,6 +85,7 @@ export default function Signals() {
                 </td>
                 <td className="space-x-2 px-4 py-3">
                   <button onClick={() => triggerMatch(s.id)} className="text-xs text-signal hover:underline">Match</button>
+                  <button onClick={() => sendFollowUp(s.id)} className="text-xs text-signal hover:underline">Follow up</button>
                   <button onClick={() => updateStatus(s.id, "suspended" === s.status ? "active" : "paused")} className="text-xs text-muted hover:underline">Suspend</button>
                   <button onClick={() => updateStatus(s.id, "flagged")} className="text-xs text-muted hover:underline">Spam</button>
                   <button onClick={() => updateStatus(s.id, "deleted")} className="text-xs text-red-600 hover:underline">Delete</button>
