@@ -59,7 +59,6 @@ export default function SignalFlow() {
     api.trackEvent("email_entered");
 
     if (isSignedIn) {
-      // Already authenticated in this browser — skip verification entirely.
       await submitSignalToBackend();
       return;
     }
@@ -250,3 +249,111 @@ export default function SignalFlow() {
                 maxLength={500}
                 placeholder="I help B2B SaaS founders build their sales pipeline..."
                 value={canOffer}
+                onChange={(e) => setCanOffer(e.target.value)}
+              />
+              <div className="mt-1 text-right font-mono text-xs text-muted">{canOffer.length} / 500</div>
+
+              <label className="field-label mt-8 !text-lg">Where are you based?</label>
+              <select
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                className="mt-3 w-full rounded-2xl border border-hairline bg-white p-3.5 text-[15px]"
+              >
+                {LOCATIONS.map((l) => (
+                  <option key={l} value={l}>{l}</option>
+                ))}
+              </select>
+
+              <div className="mt-6 flex items-center justify-between">
+                <button onClick={() => setStep("looking")} className="inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
+                  <ArrowLeft size={15} /> Back
+                </button>
+                <button
+                  disabled={!canSubmitOffer}
+                  onClick={() => (userLoaded && isSignedIn ? submitSignalToBackend() : setStep("email"))}
+                  className="btn-primary disabled:opacity-40"
+                >
+                  Continue <ArrowRight size={16} />
+                </button>
+              </div>
+            </m.div>
+          )}
+
+          {step === "email" && (
+            <m.div
+              key="email"
+              initial={{ opacity: 0, x: 16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -16 }}
+              className="w-full max-w-lg"
+            >
+              <label className="field-label">Your email</label>
+              <input
+                autoFocus
+                type="email"
+                placeholder="you@company.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleEmailContinue()}
+                className="mt-3 w-full rounded-2xl border border-hairline bg-white p-4 text-[15px] focus:border-signal focus:ring-2 focus:ring-signal/20"
+              />
+              <p className="mt-2 text-xs text-muted">
+                We'll only email you about relevant matches and important product updates.
+              </p>
+              {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+
+              <div className="mt-6 flex items-center justify-between">
+                <button onClick={() => setStep("offer")} className="inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
+                  <ArrowLeft size={15} /> Back
+                </button>
+                <button onClick={handleEmailContinue} className="btn-primary">
+                  Find my match <ArrowRight size={16} />
+                </button>
+              </div>
+            </m.div>
+          )}
+
+          {step === "verify" && (
+            <m.div
+              key="verify"
+              initial={{ opacity: 0, x: 16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -16 }}
+              className="w-full max-w-lg text-center"
+            >
+              <h2 className="font-display text-3xl font-semibold">One small step.</h2>
+              <p className="mt-3 text-muted">
+                Check your email to verify your address. Then we'll activate your signal.
+              </p>
+              <input
+                autoFocus
+                inputMode="numeric"
+                placeholder="Verification code"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleVerifyCode()}
+                className="mt-6 w-full rounded-2xl border border-hairline bg-white p-4 text-center text-lg tracking-[0.3em] focus:border-signal focus:ring-2 focus:ring-signal/20"
+              />
+              {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+              <button onClick={handleVerifyCode} className="btn-primary mt-6 w-full">
+                Verify & find my match
+              </button>
+              <div className="mt-4 flex items-center justify-center gap-4 text-sm">
+                <button onClick={handleResend} className="text-muted hover:text-ink">Resend code</button>
+                <button onClick={() => setStep("email")} className="text-muted hover:text-ink">Change email</button>
+              </div>
+            </m.div>
+          )}
+
+          {step === "submitting" && (
+            <m.div key="submitting" className="flex flex-col items-center gap-4 py-16 text-muted">
+              <Loader2 className="animate-spin" />
+              <p>Setting up your signal…</p>
+            </m.div>
+          )}
+        </AP>
+      </section>
+      <Footer />
+    </div>
+  );
+}
