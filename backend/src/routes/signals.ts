@@ -103,7 +103,8 @@ signalsRouter.post("/", requireAuth, async (req, res) => {
   }
 
   if (signal.status === "active") {
-    if (!existing) await sendVerificationReceivedEmail(databaseUserId, req.authenticatedUser!.email);
+    if (!existing)
+      await sendVerificationReceivedEmail(databaseUserId, req.authenticatedUser!.email, signal.referral_code);
     // Awaited (not fire-and-forget): on serverless hosting (Vercel), work
     // queued after the response is sent is not guaranteed to finish, so
     // matching must complete before we respond.
