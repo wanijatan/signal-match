@@ -57,15 +57,8 @@ cronRouter.get("/expire-signals", async (req, res) => {
 });
 
 const PROMO_COOLDOWN_DAYS = 7;
-const PROMO_MIN_SIGNAL_AGE_DAYS = 2; // don't nudge same-day — give the match engine a chance first
+const PROMO_MIN_SIGNAL_AGE_DAYS = 2;
 
-/**
- * GET /api/cron/promo-followup
- * Marketing nudge: anyone with an active signal who hasn't clicked through
- * to RightSignal yet gets a reminder email, at most once every 7 days,
- * starting 2 days after their signal went live. Same auth pattern as the
- * expiry cron (CRON_SECRET bearer token, sent automatically by Vercel).
- */
 cronRouter.get("/promo-followup", async (req, res) => {
   if (env.CRON_SECRET) {
     const header = req.headers.authorization;
@@ -77,21 +70,69 @@ cronRouter.get("/promo-followup", async (req, res) => {
   const minAge = new Date(Date.now() - PROMO_MIN_SIGNAL_AGE_DAYS * 86400000).toISOString();
   const cooldownCutoff = new Date(Date.now() - PROMO_COOLDOWN_DAYS * 86400000).toISOString();
 
-  // Candidates: active signals old enough to nudge.
-  const { data: signals, error: signalsErr } = await supabase
+  const signalsResult = await supabase
     .from("signals")
     .select("id, user_id, referral_code, created_at")
     .eq("status", "active")
     .lte("created_at", minAge);
-  if (signalsErr) return res.status(500).json({ error: signalsErr.message });
-  if (!signals || signals.length === 0) return res.json({ sent: 0 });
 
-  const userIds = signals.map((s) => s.user_id);
+  const signals = signalsResult.data;
+  const signalsErr = signalsResult.error;
 
-  // Exclude anyone who already clicked through to RightSignal.
-  const { data: clicked } = await supabase
+  if (signalsErr) {
+    return res.status(500).json({ error: signalsErr.message });
+  }
+  if (!signals || signals.length === 0) {
+    return res.json({ sent: 0 });
+  }
+
+  const userIds = [];
+  for (let i = 0; i < signals.length; i++) {
+    userIds.push(signals[i].user_id);
+  }
+
+  const clickedResult = await supabase
     .from("referrals")
     .select("user_id")
     .eq("rightsignal_clicked", true)
     .in("user_id", userIds);
-  const clickedIds = new Set((clicked ?? []).map((r) =>
+
+  const clickedIds = new Set();
+  const clickedRows = clickedResult.data || [];
+  for (let i = 0; i < clickedRows.length; i++) {
+    clickedIds.add(clickedRows[i].user_id);
+  }
+
+  const recentPromoResult = await supabase
+    .from("email_events")
+    .select("user_id")
+    .eq("type", "rightsignal_promo")
+    .gte("created_at", cooldownCutoff)
+    .in("user_id", userIds);
+
+  const recentlyPromotedIds = new Set();
+  const recentPromoRows = recentPromoResult.data || [];
+  for (let i = 0; i < recentPromoRows.length; i++) {
+    recentlyPromotedIds.add(recentPromoRows[i].user_id);
+  }
+
+  const eligible = [];
+  for (let i = 0; i < signals.length; i++) {
+    const signal = signals[i];
+    if (!clickedIds.has(signal.user_id) && !recentlyPromotedIds.has(signal.user_id)) {
+      eligible.push(signal);
+    }
+  }
+
+  let sent = 0;
+  for (let i = 0; i < eligible.length; i++) {
+    const signal = eligible[i];
+    const userResult = await supabase.from("users").select("email").eq("id", signal.user_id).maybeSingle();
+    const user = userResult.data;
+    if (!user || !user.email) continue;
+    await sendRightSignalPromoEmail(signal.user_id, user.email, signal.referral_code || "");
+    sent = sent + 1;
+  }
+
+  res.json({ sent: sent, candidates: signals.length });
+});
