@@ -5,6 +5,7 @@
     { "source": "/(.*)", "destination": "/api/index" }
   ],
   "crons": [
-    { "path": "/api/cron/expire-signals", "schedule": "0 3 * * *" }
+    { "path": "/api/cron/expire-signals", "schedule": "0 3 * * *" },
+    { "path": "/api/cron/promo-followup", "schedule": "0 15 * * *" }
   ]
 }
