@@ -59,6 +59,7 @@ export default function SignalFlow() {
     api.trackEvent("email_entered");
 
     if (isSignedIn) {
+      // Already authenticated in this browser — skip verification entirely.
       await submitSignalToBackend();
       return;
     }
@@ -171,12 +172,16 @@ export default function SignalFlow() {
           </div>
 
           <p className="mt-8 max-w-md text-sm text-muted">
-            We'll email you when we find a relevant match.
+            We'll email you when we find a relevant match. Your match is waiting for you on
+            RightSignal — go connect with them.
           </p>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
-            <a href="https://rightsignal.social" className="btn-primary">
-              Explore RightSignal →
+            
+              href={`${import.meta.env.VITE_RIGHTSIGNAL_URL ?? "https://rightsignal.social"}/signup?ref=signal_match&signal_ref=${submittedSignal?.referral_code ?? ""}`}
+              className="btn-primary"
+            >
+              Continue on RightSignal →
             </a>
             <button onClick={() => navigate("/")} className="btn-secondary">
               Done
