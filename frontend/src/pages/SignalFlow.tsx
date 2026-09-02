@@ -177,7 +177,7 @@ export default function SignalFlow() {
           </p>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
-            
+            <a
               href={`${import.meta.env.VITE_RIGHTSIGNAL_URL ?? "https://rightsignal.social"}/signup?ref=signal_match&signal_ref=${submittedSignal?.referral_code ?? ""}`}
               className="btn-primary"
             >
