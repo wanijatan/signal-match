@@ -11,7 +11,7 @@ export default function Footer() {
         <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted">
           <Link to="/privacy" className="hover:text-ink">Privacy</Link>
           <Link to="/terms" className="hover:text-ink">Terms</Link>
-          <a href="https://rightsignal.social" className="hover:text-ink">RightSignal</a>
+          <a href={import.meta.env.VITE_RIGHTSIGNAL_URL ?? "https://rightsignal.social"} className="hover:text-ink">RightSignal</a>
         </div>
         <p className="text-xs text-muted">We never sell your email address.</p>
       </div>
