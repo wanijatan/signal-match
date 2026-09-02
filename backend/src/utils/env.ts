@@ -18,7 +18,10 @@ const schema = z.object({
   OPENAI_API_KEY: z.string().optional().default(""),
 
   RESEND_API_KEY: z.string().optional().default(""),
-  EMAIL_FROM: z.string().default("Signal <signal@example.com>"),
+  EMAIL_FROM: z.string().default("Signal by RightSignal <signal@example.com>"),
+
+  GMAIL_USER: z.string().optional().default(""),
+  GMAIL_APP_PASSWORD: z.string().optional().default(""),
 
   APP_URL: z.string().url().default("http://localhost:5173"),
   API_URL: z.string().url().default("http://localhost:8080"),
