@@ -116,7 +116,10 @@ export default function MatchPage() {
               </p>
             )}
             <div className="mt-8 flex flex-wrap justify-center gap-4">
-              <a href="https://rightsignal.social/signup?ref=signal_match" className="btn-primary">
+              
+                href={`${import.meta.env.VITE_RIGHTSIGNAL_URL ?? "https://rightsignal.social"}/signup?ref=signal_match`}
+                className="btn-primary"
+              >
                 Continue on RightSignal →
               </a>
             </div>
