@@ -8,7 +8,17 @@
  */
 
 const SYNONYM_CLUSTERS: string[][] = [
-  ["investor", "vc", "venture capital", "venture capitalist", "angel investor", "seed investor", "pre-seed investor", "funding", "capital"],
+  // Investor / funding / fundraising are treated as one broad concept space —
+  // someone who "helps with fundraising" or "helps you raise funds" is a
+  // directly relevant match for someone "looking for an investor", per the
+  // product spec's own examples.
+  [
+    "investor", "vc", "venture capital", "venture capitalist", "angel investor",
+    "seed investor", "pre-seed investor", "funding", "capital", "fundraising",
+    "fundraise", "raise", "raising", "raise funds", "raising funds",
+    "raising capital", "raise capital", "fund raise", "fund raising", "invest",
+    "investing", "investment",
+  ],
   ["cofounder", "co-founder", "technical cofounder", "technical co-founder", "founding engineer"],
   ["designer", "product designer", "ux designer", "ui designer", "design"],
   ["developer", "engineer", "software engineer", "frontend developer", "backend developer", "full stack developer", "programmer"],
@@ -22,7 +32,6 @@ const SYNONYM_CLUSTERS: string[][] = [
   ["job", "opportunity", "role", "position", "employment"],
   ["introduction", "intro", "connection", "network", "warm intro"],
   ["legal", "lawyer", "attorney", "counsel"],
-  ["fundraising", "raise", "raising capital", "fundraise"],
 ];
 
 const STOPWORDS = new Set([
@@ -40,18 +49,42 @@ function tokenize(text: string): string[] {
     .filter((t) => t.length > 1 && !STOPWORDS.has(t));
 }
 
+/**
+ * Crude suffix-stripping so simple tense/plural variants line up (e.g.
+ * "raising" / "raised" both reduce toward "rais", matching "raise").
+ * Not real stemming (no dictionary, no exceptions) — just enough to catch
+ * the common English suffixes without pulling in an NLP dependency.
+ */
+function roughStem(word: string): string {
+  return word
+    .replace(/(ing|ies|ers|ed|es|s)$/i, (suffix, _match, offset, full) =>
+      full.length - suffix.length >= 3 ? "" : suffix
+    );
+}
+
 /** Expands each token to its synonym cluster's canonical (first) term. */
 function canonicalize(tokens: string[]): Set<string> {
   const out = new Set<string>();
   for (const token of tokens) {
+    const stem = roughStem(token);
     let matched = false;
     for (const cluster of SYNONYM_CLUSTERS) {
-      if (cluster.some((phrase) => phrase.includes(token) || token.includes(phrase))) {
+      const hit = cluster.some((phrase) => {
+        const phraseStem = roughStem(phrase);
+        return (
+          phrase.includes(token) ||
+          token.includes(phrase) ||
+          phraseStem === stem ||
+          phrase.includes(stem) ||
+          stem.includes(phraseStem)
+        );
+      });
+      if (hit) {
         out.add(cluster[0]);
         matched = true;
       }
     }
-    if (!matched) out.add(token);
+    if (!matched) out.add(stem || token);
   }
   return out;
 }
